@@ -13,6 +13,10 @@ Julia translation of the MATALB code: http://www.cs.princeton.edu/~mdhoffma/code
 
 Python translation: https://github.com/dawenl/bp_nmf
 
+### Demo
+
+- [GaP-NMF | nbviewer](http://nbviewer.ipython.org/github/r9y9/BNMF.jl/blob/master/tutorial/GaP-NMF.ipynb)
+
 ## License
 
 [MIT](./LICENSE.md)
