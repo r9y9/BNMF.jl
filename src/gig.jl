@@ -7,7 +7,7 @@ function gigexpect(gamma, rho, tau)
 
     Ex, Exinv = zeros(size(rho)), zeros(size(rho))
 
-    # For very small values of gamma and positive values of alpha, the GIG
+    # For very small values of tau and positive values of gamma, the GIG
     # distribution becomes a gamma distribution, and its expectations are both
     # cheaper and more stable to compute that way.
     giginds = find(tau[:] .> 1e-200)
