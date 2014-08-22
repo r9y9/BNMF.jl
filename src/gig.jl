@@ -41,7 +41,7 @@ function gigexpect(gamma, rho, tau)
 end
 
 # giggammaterm computes 
-function giggammaterm(Ex, Exinv, rho, tau, a, b; cutoff=1e-200)
+function giggammaterm(Ex, Exinv, rho, tau, a, b; cutoff::Float64=1e-200)
     score = 0.0
     zerotau = find(tau[:] .<= cutoff)
     nonzerotau = find(tau[:] .> cutoff)

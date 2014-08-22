@@ -153,15 +153,15 @@ function clearbadk!(gap::GaPNMF)
     good = goodk(gap)
     bad = setdiff(1:gap.K, good)
     gap.rhow[:,bad] = gap.a
-    gap.tauw[:,bad] = 0
+    gap.tauw[:,bad] = 0.0
     gap.rhoh[bad,:] = gap.b
-    gap.tauh[bad,:] = 0
+    gap.tauh[bad,:] = 0.0
 
     updateE!(gap)
 end
 
 function bound(gap::GaPNMF)
-    score = 0
+    score::Float64 = 0.0
     good = goodk(gap)
     
     xb = xbar(gap, good)
@@ -177,8 +177,9 @@ function bound(gap::GaPNMF)
     return score
 end
 
-function fit!(gap::GaPNMF; epochs=20, criterion=None, verbose=false)
-    score = -Inf
+function fit!(gap::GaPNMF; 
+              epochs::Int=20, criterion=None, verbose::Bool=false)
+    score::Float64 = -Inf
 
     # update all expectations
     updateE!(gap)
