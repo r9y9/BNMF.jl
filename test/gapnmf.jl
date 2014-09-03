@@ -37,6 +37,22 @@ end
 function fit(X)
     gap = GaPNMF(X)
     fit!(gap, verbose=false)
+    
+    @test !any(isnan(gap.rhow))
+    @test !any(isnan(gap.tauw))
+    @test !any(isnan(gap.rhoh))
+    @test !any(isnan(gap.tauh))
+    @test !any(isnan(gap.rhot))
+    @test !any(isnan(gap.taut))
+    @test !any(isnan(gap.Ew))
+    @test !any(isnan(gap.Ewinv))
+    @test !any(isnan(gap.Ewinvinv))
+    @test !any(isnan(gap.Eh))
+    @test !any(isnan(gap.Ehinv))
+    @test !any(isnan(gap.Ehinvinv))
+    @test !any(isnan(gap.Et))
+    @test !any(isnan(gap.Etinv))
+    @test !any(isnan(gap.Etinvinv))
 end
 
 srand(98765)
