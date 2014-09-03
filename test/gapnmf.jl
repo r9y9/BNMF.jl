@@ -39,6 +39,7 @@ function fit(X)
     fit!(gap, verbose=false)
 end
 
+srand(98765)
 A = rand(10, 10)
 B = rand(100, 100)
 
