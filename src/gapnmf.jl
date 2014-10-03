@@ -17,19 +17,19 @@ type GaPNMF
     # Hyper parameters
     a::Float64
     b::Float64
-    alpha::Float64
+    α::Float64
     
     # q(W)
-    rhow::Matrix{Float64}
-    tauw::Matrix{Float64}
+    ρʷ::Matrix{Float64}
+    τʷ::Matrix{Float64}
 
     # q(H)
-    rhoh::Matrix{Float64}
-    tauh::Matrix{Float64}
+    ρʰ::Matrix{Float64}
+    τʰ::Matrix{Float64}
 
     # q(theta)
-    rhot::Vector{Float64}
-    taut::Vector{Float64}
+    ρᵗ::Vector{Float64}
+    τᵗ::Vector{Float64}
 
     # Expectations
     Ew::Matrix{Float64}
@@ -43,13 +43,13 @@ type GaPNMF
     Etinvinv::Vector{Float64}
 end
 
-function GaPNMF(X; K=100, a=0.1, b=0.1, alpha=1.0, smoothness=100)
+function GaPNMF(X; K=100, a=0.1, b=0.1, α=1.0, smoothness=100)
     Y = X / mean(X)
     M, N = size(X)
 
     gamma = Distributions.Gamma(smoothness, 1.0/smoothness)
 
-    GaPNMF(Y, K, a, b, alpha, 
+    GaPNMF(Y, K, a, b, α, 
            10000*rand(gamma, (M, K)),
            10000*rand(gamma, (M, K)),
            10000*rand(gamma, (K, N)),
@@ -70,24 +70,24 @@ end
 # updateEw! updates expectations of W.
 function updateEw!(gap::GaPNMF, ks=1:gap.K)
     gap.Ew[:,ks], gap.Ewinv[:,ks] = gigexpect(gap.a, 
-                                              gap.rhow[:,ks], 
-                                              gap.tauw[:,ks])
+                                              gap.ρʷ[:,ks], 
+                                              gap.τʷ[:,ks])
     gap.Ewinvinv[:,ks] = gap.Ewinv[:,ks].^-1
 end
 
 # updateEh! updates expectations of H.
 function updateEh!(gap::GaPNMF, ks=1:gap.K)
     gap.Eh[ks,:], gap.Ehinv[ks,:] = gigexpect(gap.b,
-                                              gap.rhoh[ks,:],
-                                              gap.tauh[ks,:])
+                                              gap.ρʰ[ks,:],
+                                              gap.τʰ[ks,:])
     gap.Ehinvinv[ks,:] = gap.Ehinv[ks,:].^-1
 end
 
 # updateEt! updates expectations of theta.
 function updateEt!(gap::GaPNMF, ks=1:gap.K)
-    gap.Et[ks], gap.Etinv[ks] = gigexpect(gap.alpha/gap.K,
-                                          gap.rhot[ks],
-                                          gap.taut[ks])
+    gap.Et[ks], gap.Etinv[ks] = gigexpect(gap.α/gap.K,
+                                          gap.ρᵗ[ks],
+                                          gap.τᵗ[ks])
     gap.Etinvinv[ks] = gap.Etinv[ks].^-1
 end
 
@@ -104,10 +104,10 @@ function updateW!(gap::GaPNMF)
     dEt = diagm(gap.Et[good])
     dEtinvinv = diagm(gap.Etinvinv[good])
 
-    gap.rhow[:,good] = gap.a + xbarinv * gap.Eh[good,:]' * dEt
-    gap.tauw[:,good] = gap.Ewinvinv[:,good].^2 .* 
+    gap.ρʷ[:,good] = gap.a + xbarinv * gap.Eh[good,:]' * dEt
+    gap.τʷ[:,good] = gap.Ewinvinv[:,good].^2 .* 
                        (xxtwidinvsq * gap.Ehinvinv[good,:]' * dEtinvinv)
-    gap.tauw[gap.tauw .< 1.0e-100] = 0
+    gap.τʷ[gap.τʷ .< 1.0e-100] = 0
     updateEw!(gap, good)    
 end
 
@@ -118,10 +118,10 @@ function updateH!(gap::GaPNMF)
     dEt = diagm(gap.Et[good])
     dEtinvinv = diagm(gap.Etinvinv[good])
 
-    gap.rhoh[good,:] = gap.b + dEt * (gap.Ew[:,good]' * xbarinv)
-    gap.tauh[good,:] = gap.Ehinvinv[good,:].^2 .* 
+    gap.ρʰ[good,:] = gap.b + dEt * (gap.Ew[:,good]' * xbarinv)
+    gap.τʰ[good,:] = gap.Ehinvinv[good,:].^2 .* 
                        (dEtinvinv * (gap.Ewinvinv[:,good]' * xxtwidinvsq))
-    gap.tauh[gap.tauh .< 1.0e-100] = 0
+    gap.τʰ[gap.τʰ .< 1.0e-100] = 0
     updateEh!(gap, good)        
 end
 
@@ -130,12 +130,12 @@ function updateT!(gap::GaPNMF)
     xxtwidinvsq = gap.X .* xtwid(gap, good).^-2
     xbarinv = xbar(gap, good).^-1
 
-    gap.rhot[good] = gap.alpha + 
+    gap.ρᵗ[good] = gap.α + 
                      sum(gap.Ew[:,good]' * xbarinv .* gap.Eh[good,:], 2)
-    gap.taut[good] = gap.Etinvinv[good].^2 .* sum(gap.Ewinvinv[:,good]' *
+    gap.τᵗ[good] = gap.Etinvinv[good].^2 .* sum(gap.Ewinvinv[:,good]' *
                                                   xxtwidinvsq .* 
                                                   gap.Ehinvinv[good,:], 2)
-    gap.taut[gap.taut .< 1.0e-100] = 0
+    gap.τᵗ[gap.τᵗ .< 1.0e-100] = 0
     updateEt!(gap, good)
 end
 
@@ -152,10 +152,10 @@ end
 function clearbadk!(gap::GaPNMF)
     good = goodk(gap)
     bad = setdiff(1:gap.K, good)
-    gap.rhow[:,bad] = gap.a
-    gap.tauw[:,bad] = 0.0
-    gap.rhoh[bad,:] = gap.b
-    gap.tauh[bad,:] = 0.0
+    gap.ρʷ[:,bad] = gap.a
+    gap.τʷ[:,bad] = 0.0
+    gap.ρʰ[bad,:] = gap.b
+    gap.τʰ[bad,:] = 0.0
 
     updateE!(gap)
 end
@@ -168,12 +168,12 @@ function bound(gap::GaPNMF)
     xtw = xtwid(gap, good)
 
     score -= sum(gap.X ./ xtw + log(xb))
-    score += giggammaterm(gap.Ew, gap.Ewinv, gap.rhow, gap.tauw,
+    score += giggammaterm(gap.Ew, gap.Ewinv, gap.ρʷ, gap.τʷ,
                           gap.a, gap.a)
-    score += giggammaterm(gap.Eh, gap.Ehinv, gap.rhoh, gap.tauh, 
+    score += giggammaterm(gap.Eh, gap.Ehinv, gap.ρʰ, gap.τʰ, 
                           gap.b, gap.b)
-    score += giggammaterm(gap.Et, gap.Etinv, gap.rhot, gap.taut, 
-                          gap.alpha/gap.K, gap.alpha)
+    score += giggammaterm(gap.Et, gap.Etinv, gap.ρᵗ, gap.τᵗ, 
+                          gap.α/gap.K, gap.α)
     return score
 end
 

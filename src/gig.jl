@@ -1,63 +1,64 @@
 # gigexpect returns E(x) and E(1/x) of Generalized Inverse Gaussian (GIG)
-# distribution that is parametrized by gamma, rho and tau.
-function gigexpect(gamma, rho, tau)
-    if length(gamma) == 1
-        gamma = gamma * ones(size(rho))
+# distribution that is parametrized by γ, ρ and τ.
+function gigexpect(γ, ρ, τ)
+    τ
+    if length(γ) == 1
+        γ = γ * ones(size(ρ))
     end
 
-    Ex, Exinv = zeros(size(rho)), zeros(size(rho))
+    Ex, Exinv = zeros(size(ρ)), zeros(size(ρ))
 
-    # For very small values of tau and positive values of gamma, the GIG
-    # distribution becomes a gamma distribution, and its expectations are both
+    # For very small values of τ and positive values of γ, the GIG
+    # distribution becomes a γ distribution, and its expectations are both
     # cheaper and more stable to compute that way.
-    giginds = find(tau[:] .> 1e-200)
-    gaminds = find(tau[:] .<= 1e-200)
+    giginds = find(τ[:] .> 1e-200)
+    gaminds = find(τ[:] .<= 1e-200)
 
-    if sum(gamma[gaminds] .< 0) > 0
+    if sum(γ[gaminds] .< 0) > 0
         error("problem with arguments.")
     end
 
     # GIG
-    sqrtRho = sqrt(rho[giginds])
-    sqrtTau = sqrt(tau[giginds])
-    sqrtRatio = sqrtTau ./ sqrtRho
+    sqrt_ρ = sqrt(ρ[giginds])
+    sqrt_τ = sqrt(τ[giginds])
+    sqrt_ratio = sqrt_τ ./ sqrt_ρ
 
     # Note that we're using the *scaled* version here, since we're just
     # computing ratios and it's more stable.
-    besselPlus = besselkx(gamma[giginds]+1, 2*sqrtRho .* sqrtTau)
-    bessel = besselkx(gamma[giginds], 2*sqrtRho .* sqrtTau)
-    besselMinus = besselkx(gamma[giginds]-1, 2*sqrtRho .* sqrtTau)
+    bessel_plus = besselkx(γ[giginds]+1, 2*sqrt_ρ .* sqrt_τ)
+    bessel = besselkx(γ[giginds], 2*sqrt_ρ .* sqrt_τ)
+    bessel_minus = besselkx(γ[giginds]-1, 2*sqrt_ρ .* sqrt_τ)
     
-    Ex[giginds] = besselPlus .* sqrtRatio ./ bessel
-    Exinv[giginds] = besselMinus ./ (sqrtRatio .* bessel)
+    Ex[giginds] = bessel_plus .* sqrt_ratio ./ bessel
+    Exinv[giginds] = bessel_minus ./ (sqrt_ratio .* bessel)
 
-    # Compute expectations for gamma distribution where we can get away with
+    # Compute expectations for γ distribution where we can get away with
     # it.
-    Ex[gaminds] = gamma[gaminds] ./ rho[gaminds]
-    Exinv[gaminds] = rho[gaminds] ./ (gamma[gaminds] - 1)
+    Ex[gaminds] = γ[gaminds] ./ ρ[gaminds]
+    Exinv[gaminds] = ρ[gaminds] ./ (γ[gaminds] - 1)
     Exinv[Exinv .< 0] = Inf
 
     return Ex, Exinv
 end
 
 # giggammaterm computes 
-function giggammaterm(Ex, Exinv, rho, tau, a, b; cutoff::Float64=1e-200)
+function giggammaterm(Ex, Exinv, ρ, τ, a, b; cutoff::Float64=1e-200)
     score = 0.0
-    zerotau = find(tau[:] .<= cutoff)
-    nonzerotau = find(tau[:] .> cutoff)
+    zerotau = find(τ[:] .<= cutoff)
+    nonzerotau = find(τ[:] .> cutoff)
 
     score += length(Ex) * (a * log(b) - lgamma(a))
-    score -= sum((b - rho[:]) .* Ex[:])
+    score -= sum((b - ρ[:]) .* Ex[:])
 
     score -= length(nonzerotau) * log(0.5)
-    score += sum(tau[nonzerotau] .* Exinv[nonzerotau])
-    score -= 0.5 * a * sum(log(rho[nonzerotau]) - log(tau[nonzerotau]))
+    score += sum(τ[nonzerotau] .* Exinv[nonzerotau])
+    score -= 0.5 * a * sum(log(ρ[nonzerotau]) - log(τ[nonzerotau]))
 
     # It's numerically safer to use scaled version of besselk    
-    innerlog = besselkx(a, 2*sqrt(rho[nonzerotau] .* tau[nonzerotau]))
-    score += sum(log(innerlog) - 2*sqrt(rho[nonzerotau] .* tau[nonzerotau]))
+    innerlog = besselkx(a, 2*sqrt(ρ[nonzerotau] .* τ[nonzerotau]))
+    score += sum(log(innerlog) - 2*sqrt(ρ[nonzerotau] .* τ[nonzerotau]))
 
-    score += sum(-a*log(rho[zerotau]) + lgamma(a))
+    score += sum(-a*log(ρ[zerotau]) + lgamma(a))
 
     return score
 end
