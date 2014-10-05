@@ -11,8 +11,8 @@ function gigexpect(γ, ρ, τ)
     # For very small values of τ and positive values of γ, the GIG
     # distribution becomes a γ distribution, and its expectations are both
     # cheaper and more stable to compute that way.
-    giginds = find(τ[:] .> 1e-200)
-    gaminds = find(τ[:] .<= 1e-200)
+    giginds = find(vec(τ) .> 1e-200)
+    gaminds = find(vec(τ) .<= 1e-200)
 
     if sum(γ[gaminds] .< 0) > 0
         error("problem with arguments.")
@@ -44,11 +44,11 @@ end
 # giggammaterm computes 
 function giggammaterm(Ex, Exinv, ρ, τ, a, b; cutoff::Float64=1e-200)
     score = 0.0
-    zerotau = find(τ[:] .<= cutoff)
-    nonzerotau = find(τ[:] .> cutoff)
+    zerotau = find(vec(τ) .<= cutoff)
+    nonzerotau = find(vec(τ) .> cutoff)
 
     score += length(Ex) * (a * log(b) - lgamma(a))
-    score -= sum((b - ρ[:]) .* Ex[:])
+    score -= sum((b - vec(ρ)) .* vec(Ex))
 
     score -= length(nonzerotau) * log(0.5)
     score += sum(τ[nonzerotau] .* Exinv[nonzerotau])

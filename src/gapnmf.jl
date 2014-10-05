@@ -142,7 +142,7 @@ end
 function goodk(gap::GaPNMF; cutoff=1.0e-10)
     cutoff *= maximum(gap.X)
 
-    powers = (gap.Et .* maximum(gap.Ew, 1)' .* maximum(gap.Eh, 2))[:]
+    powers = vec((gap.Et .* maximum(gap.Ew, 1)' .* maximum(gap.Eh, 2)))
     perm = sortperm(powers, rev=true)
     sorted = powers[perm]
     
