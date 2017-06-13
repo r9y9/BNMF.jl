@@ -1,7 +1,6 @@
 # gigexpect returns E(x) and E(1/x) of Generalized Inverse Gaussian (GIG)
 # distribution that is parametrized by γ, ρ and τ.
 function gigexpect(γ, ρ, τ)
-    τ
     if length(γ) == 1
         γ = γ * ones(size(ρ))
     end
@@ -19,16 +18,16 @@ function gigexpect(γ, ρ, τ)
     end
 
     # GIG
-    sqrt_ρ = sqrt(ρ[giginds])
-    sqrt_τ = sqrt(τ[giginds])
+    sqrt_ρ = sqrt.(ρ[giginds])
+    sqrt_τ = sqrt.(τ[giginds])
     sqrt_ratio = sqrt_τ ./ sqrt_ρ
 
     # Note that we're using the *scaled* version here, since we're just
     # computing ratios and it's more stable.
-    bessel_plus = besselkx(γ[giginds]+1, 2*sqrt_ρ .* sqrt_τ)
-    bessel = besselkx(γ[giginds], 2*sqrt_ρ .* sqrt_τ)
-    bessel_minus = besselkx(γ[giginds]-1, 2*sqrt_ρ .* sqrt_τ)
-    
+    bessel_plus = besselkx.(γ[giginds]+1, 2*sqrt_ρ .* sqrt_τ)
+    bessel = besselkx.(γ[giginds], 2*sqrt_ρ .* sqrt_τ)
+    bessel_minus = besselkx.(γ[giginds]-1, 2*sqrt_ρ .* sqrt_τ)
+
     Ex[giginds] = bessel_plus .* sqrt_ratio ./ bessel
     Exinv[giginds] = bessel_minus ./ (sqrt_ratio .* bessel)
 
@@ -41,24 +40,24 @@ function gigexpect(γ, ρ, τ)
     return Ex, Exinv
 end
 
-# giggammaterm computes 
+# giggammaterm computes
 function giggammaterm(Ex, Exinv, ρ, τ, a, b; cutoff::Float64=1e-200)
     score = 0.0
     zerotau = find(vec(τ) .<= cutoff)
     nonzerotau = find(vec(τ) .> cutoff)
 
-    score += length(Ex) * (a * log(b) - lgamma(a))
+    score += length(Ex) * (a * log.(b) - lgamma.(a))
     score -= sum((b - vec(ρ)) .* vec(Ex))
 
     score -= length(nonzerotau) * log(0.5)
     score += sum(τ[nonzerotau] .* Exinv[nonzerotau])
-    score -= 0.5 * a * sum(log(ρ[nonzerotau]) - log(τ[nonzerotau]))
+    score -= 0.5 * a * sum(log.(ρ[nonzerotau]) - log.(τ[nonzerotau]))
 
-    # It's numerically safer to use scaled version of besselk    
-    innerlog = besselkx(a, 2*sqrt(ρ[nonzerotau] .* τ[nonzerotau]))
-    score += sum(log(innerlog) - 2*sqrt(ρ[nonzerotau] .* τ[nonzerotau]))
+    # It's numerically safer to use scaled version of besselk
+    innerlog = besselkx.(a, 2*sqrt.(ρ[nonzerotau] .* τ[nonzerotau]))
+    score += sum(log.(innerlog) - 2*sqrt.(ρ[nonzerotau] .* τ[nonzerotau]))
 
-    score += sum(-a*log(ρ[zerotau]) + lgamma(a))
+    score += sum(-a*log.(ρ[zerotau]) + lgamma(a))
 
     return score
 end

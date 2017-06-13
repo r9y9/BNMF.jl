@@ -1,8 +1,8 @@
 # Julia translation of MATLAB code for GaP-NMF as in
 # "Bayesian Nonparametric Matrix Factorization for Recorded Music"
 # by Matthew D. Hoffman et al. in ICML 2010.
-# 
-# The original matlab code: 
+#
+# The original matlab code:
 # http://www.cs.princeton.edu/~mdhoffma/code/gapnmfmatlab.tar
 
 # For gamma rand
@@ -18,7 +18,7 @@ type GaPNMF
     a::Float64
     b::Float64
     α::Float64
-    
+
     # q(W)
     ρʷ::Matrix{Float64}
     τʷ::Matrix{Float64}
@@ -44,16 +44,16 @@ type GaPNMF
 end
 
 function GaPNMF(X; K=100, a=0.1, b=0.1, α=1.0, smoothness=100)
-    Y = X / mean(X)
+    Y = X ./ mean(X)
     M, N = size(X)
 
     gamma = Distributions.Gamma(smoothness, 1.0/smoothness)
 
-    GaPNMF(Y, K, a, b, α, 
-           10000*rand(gamma, (M, K)),
-           10000*rand(gamma, (M, K)),
-           10000*rand(gamma, (K, N)),
-           10000*rand(gamma, (K, N)),
+    GaPNMF(Y, K, a, b, α,
+           10000*rand(gamma, M, K),
+           10000*rand(gamma, M, K),
+           10000*rand(gamma, K, N),
+           10000*rand(gamma, K, N),
            K*10000*rand(gamma, K),
            1.0/K*10000*rand(gamma, K),
            zeros(M, K),
@@ -69,8 +69,8 @@ end
 
 # updateEw! updates expectations of W.
 function updateEw!(gap::GaPNMF, ks=1:gap.K)
-    gap.Ew[:,ks], gap.Ewinv[:,ks] = gigexpect(gap.a, 
-                                              gap.ρʷ[:,ks], 
+    gap.Ew[:,ks], gap.Ewinv[:,ks] = gigexpect(gap.a,
+                                              gap.ρʷ[:,ks],
                                               gap.τʷ[:,ks])
     gap.Ewinvinv[:,ks] = gap.Ewinv[:,ks].^-1
 end
@@ -105,10 +105,10 @@ function updateW!(gap::GaPNMF)
     dEtinvinv = diagm(gap.Etinvinv[good])
 
     gap.ρʷ[:,good] = gap.a + xbarinv * gap.Eh[good,:]' * dEt
-    gap.τʷ[:,good] = gap.Ewinvinv[:,good].^2 .* 
+    gap.τʷ[:,good] = gap.Ewinvinv[:,good].^2 .*
                        (xxtwidinvsq * gap.Ehinvinv[good,:]' * dEtinvinv)
     gap.τʷ[gap.τʷ .< 1.0e-100] = 0
-    updateEw!(gap, good)    
+    updateEw!(gap, good)
 end
 
 function updateH!(gap::GaPNMF)
@@ -119,10 +119,10 @@ function updateH!(gap::GaPNMF)
     dEtinvinv = diagm(gap.Etinvinv[good])
 
     gap.ρʰ[good,:] = gap.b + dEt * (gap.Ew[:,good]' * xbarinv)
-    gap.τʰ[good,:] = gap.Ehinvinv[good,:].^2 .* 
+    gap.τʰ[good,:] = gap.Ehinvinv[good,:].^2 .*
                        (dEtinvinv * (gap.Ewinvinv[:,good]' * xxtwidinvsq))
     gap.τʰ[gap.τʰ .< 1.0e-100] = 0
-    updateEh!(gap, good)        
+    updateEh!(gap, good)
 end
 
 function updateT!(gap::GaPNMF)
@@ -130,22 +130,22 @@ function updateT!(gap::GaPNMF)
     xxtwidinvsq = gap.X .* xtwid(gap, good).^-2
     xbarinv = xbar(gap, good).^-1
 
-    gap.ρᵗ[good] = gap.α + 
+    gap.ρᵗ[good] = gap.α +
                      sum(gap.Ew[:,good]' * xbarinv .* gap.Eh[good,:], 2)
     gap.τᵗ[good] = gap.Etinvinv[good].^2 .* sum(gap.Ewinvinv[:,good]' *
-                                                  xxtwidinvsq .* 
+                                                  xxtwidinvsq .*
                                                   gap.Ehinvinv[good,:], 2)
     gap.τᵗ[gap.τᵗ .< 1.0e-100] = 0
     updateEt!(gap, good)
 end
 
-function goodk(gap::GaPNMF; cutoff=1.0e-10)
+function goodk(gap::GaPNMF; cutoff::Float64=1.0e-10)
     cutoff *= maximum(gap.X)
 
     powers = vec((gap.Et .* maximum(gap.Ew, 1)' .* maximum(gap.Eh, 2)))
     perm = sortperm(powers, rev=true)
     sorted = powers[perm]
-    
+
     indices = perm[find(sorted/maximum(sorted) .> cutoff)]
 end
 
@@ -163,22 +163,22 @@ end
 function bound(gap::GaPNMF)
     score::Float64 = 0.0
     good = goodk(gap)
-    
+
     xb = xbar(gap, good)
     xtw = xtwid(gap, good)
 
     score -= sum(gap.X ./ xtw + log(xb))
     score += giggammaterm(gap.Ew, gap.Ewinv, gap.ρʷ, gap.τʷ,
                           gap.a, gap.a)
-    score += giggammaterm(gap.Eh, gap.Ehinv, gap.ρʰ, gap.τʰ, 
+    score += giggammaterm(gap.Eh, gap.Ehinv, gap.ρʰ, gap.τʰ,
                           gap.b, gap.b)
-    score += giggammaterm(gap.Et, gap.Etinv, gap.ρᵗ, gap.τᵗ, 
+    score += giggammaterm(gap.Et, gap.Etinv, gap.ρᵗ, gap.τᵗ,
                           gap.α/gap.K, gap.α)
     return score
 end
 
-function fit!(gap::GaPNMF; 
-              epochs::Int=20, criterion=None, verbose::Bool=false)
+function fit!(gap::GaPNMF;
+              epochs::Int=20, criterion=nothing, verbose::Bool=false)
     score::Float64 = -Inf
 
     # update all expectations
@@ -189,7 +189,7 @@ function fit!(gap::GaPNMF;
         updateW!(gap)
         updateH!(gap)
         updateT!(gap)
-        
+
         # truncate
         clearbadk!(gap)
 
@@ -204,7 +204,7 @@ function fit!(gap::GaPNMF;
                     activek: $(length(goodk(gap)))")
         end
 
-        if criterion != None && improvement < criterion
+        if criterion != nothing && improvement < criterion
             if verbose
                 println("converged")
             end
